@@ -1,0 +1,42 @@
+[project]
+name = "allsomojo"
+version = "0.1.0"
+description = "Mojo🔥 code repositoy index."
+authors = [{ name = "Dan Kelleher", email = "kelleherjdan@gmail.com" }]
+license = { text = "MIT" }
+readme = "README.md"
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+
+dependencies = [
+    "pygithub",
+    "ezloggers",
+    "sqlalchemy>=2.0.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "python-dotenv",
+    "tqdm",
+    "psycopg>=3.0.0",
+    "click",
+    "sh",
+    "gspread",
+    "pandas>=2.0.0",
+    "google-api-python-client>=2.0.0",
+]
+
+#oauth2client = "^4.1.3"
+[project.optional-dependencies]
+dev = ["black"]
+
+[tool.setuptools]
+packages = ["allsomojo"]
+
+[project.scripts]
+allsomojo = "allsomojo.cli:cli"
+
+[build-system]
+requires = ["setuptools>=43.0.0", "setuptools-scm", "wheel"]
+build-backend = "setuptools.build_meta"
