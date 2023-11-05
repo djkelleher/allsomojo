@@ -4,7 +4,7 @@ tests/t.ipynb
 tests/dbg.py
 .env
 *.pickle
-
+.vscode
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
