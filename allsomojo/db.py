@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-from functools import cache
 from typing import Any, Dict
 
 import sqlalchemy as sa
@@ -22,7 +21,6 @@ engine = sa.create_engine(pg_url_str())
 sa_meta = sa.MetaData(schema=SCHEMA_NAME)
 
 
-@cache
 def check_tables_exist():
     """Check if tables exist."""
     with engine.begin() as conn:
