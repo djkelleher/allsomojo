@@ -3,9 +3,10 @@ from multiprocessing import Process, Queue
 from pathlib import Path
 
 import sqlalchemy as sa
+from task_flows import task
 
-from .common import code_file_suffixes, config, logger
-from .db import engine, pg_url_str, repos_table
+from .common import code_file_suffixes, config, logger, task_alerts
+from .db import check_tables_exist, engine, pg_url_str, repos_table
 from .files import count_file_lines, local_repo_paths
 from .ghub import save_github_repos_metadata
 from .gitops import (
@@ -17,11 +18,13 @@ from .gitops import (
 from .sheet import save_comment_repos
 
 
+@task(name="allsomojo-update-db", required=True, alerts=task_alerts)
 def update_db(
     start_search_at_last_crawl: bool = True,
     include_blacklisted: bool = False,
 ):
     """Update database with new repos / repo changes."""
+    check_tables_exist()
     save_comment_repos()
     save_github_repos_metadata(start_search_at_last_crawl, include_blacklisted)
     git_pull_local_repos(include_blacklisted)

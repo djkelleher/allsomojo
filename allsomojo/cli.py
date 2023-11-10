@@ -22,6 +22,7 @@ def update_db(search_from_start, include_blacklisted):
 @cli.command
 def update_sheet():
     """Update Google Sheet with current database data."""
+    from .common import env_file_loaded
     from .sheet import update_sheet as _update_sheet
 
     click.echo(click.style("Updating Google Sheet.", fg="cyan"))

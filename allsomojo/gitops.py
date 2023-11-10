@@ -11,7 +11,7 @@ import sh
 import sqlalchemy as sa
 from sh import ErrorReturnCode, TimeoutException, git, wc
 
-from .common import config, logger, repos_base_dir
+from .common import config, logger
 from .db import engine, repos_table
 from .files import local_repo_paths
 
@@ -31,7 +31,7 @@ def git_pull_local_repos(include_blacklisted: bool):
         git.pull.bake(
             "--quiet",
             _cwd=d,
-            _timeout=300,
+            _timeout=400,
             _tty_out=False,
             _tty_in=False,
         )
@@ -87,7 +87,7 @@ def clone_new_repos(include_blacklisted: bool, retries: int = 2) -> None:
         return
     clone_cmds = []
     for full_name, username, clone_url in repos_metadata:
-        local_path = repos_base_dir.joinpath(full_name)
+        local_path = config.repos_base_dir.joinpath(full_name)
         if local_path.is_dir():
             logger.info(
                 "%s is already cloned locally but local_path was not in database. Adding local_path now.",
@@ -95,13 +95,13 @@ def clone_new_repos(include_blacklisted: bool, retries: int = 2) -> None:
             )
             _update_local_repo_paths(full_name, local_path)
             continue
-        user_dir = repos_base_dir / username
+        user_dir = config.repos_base_dir / username
         user_dir.mkdir(exist_ok=True, parents=True)
         clone_cmds.append(
             git.clone.bake(
                 clone_url,
                 user_dir / Path(clone_url).stem,
-                _timeout=400,
+                _timeout=600,
                 _out=sys.stdout,
                 _err=sys.stderr,
             )
