@@ -366,13 +366,22 @@ def save_comment_repos():
     repos = []
     for reply in comment["replies"]:
         repos += re.findall(r"[^\s\/,]+\/[^\s\/,]+", reply["content"])
-    repos = [{"full_name": full_name} for full_name in repos if full_name]
+    repos = [
+        {"full_name": full_name, "blacklisted_reason": None, "manually_checked": True}
+        for full_name in repos
+        if full_name
+    ]
     logger.info("Found %i manual repo additions from comments:\n%s", len(repos), repos)
     if repos:
-        statement = (
-            insert(repos_table)
-            .values(repos)
-            .on_conflict_do_nothing(index_elements=repos_table.primary_key.columns)
+        statement = insert(repos_table).values(repos)
+        on_conf_set = {c.name: c for c in statement.excluded}
+        on_conf_set = {
+            n: c
+            for n, c in on_conf_set.items()
+            if n in ("blacklisted_reason", "manually_checked")
+        }
+        statement = statement.on_conflict_do_update(
+            index_elements=repos_table.primary_key.columns, set_=on_conf_set
         )
         with engine.begin() as conn:
             conn.execute(statement)

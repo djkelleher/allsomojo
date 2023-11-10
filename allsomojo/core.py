@@ -95,6 +95,7 @@ def blacklist_repos():
                 ),
                 repos_table.c.blacklisted_reason.is_(None),
                 repos_table.c.local_path.isnot(None),
+                repos_table.c.manually_checked == False,
             )
             .values(blacklisted_reason="no code files")
         )
