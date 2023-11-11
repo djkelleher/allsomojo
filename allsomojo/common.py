@@ -3,11 +3,10 @@ from pathlib import Path
 from typing import List, Optional
 
 from dotenv import load_dotenv
+from ezloggers import get_logger
 from pydantic import PositiveInt, PostgresDsn, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from task_flows import Alerts, Slack
-
-from ezloggers import get_logger
 
 base_dir = Path(__file__).parents[1]
 
@@ -26,7 +25,7 @@ class Config(BaseSettings):
     # postgres URL
     pg_url: PostgresDsn
     # max number of simultaneous bandwidth-using git commands (e.g. clone, pull). Defaults to 5.
-    max_git_io: PositiveInt = 5
+    max_git_io: PositiveInt = 8
     max_process: PositiveInt = max(int(cpu_count() * 0.66), 1)
     # where repos should be cloned.
     repos_base_dir: Path = base_dir / "repos"

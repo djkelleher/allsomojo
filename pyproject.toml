@@ -25,6 +25,7 @@ dependencies = [
     "gspread",
     "pandas>=2.0.0",
     "google-api-python-client>=2.0.0",
+    "toolz",
 ]
 
 #oauth2client = "^4.1.3"

@@ -1,15 +1,18 @@
+import os
 import re
 import sys
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from pathlib import Path
+from shutil import rmtree
 from time import sleep
 from typing import Generator, Sequence, Set, Tuple
 
 import sh
 import sqlalchemy as sa
 from sh import ErrorReturnCode, TimeoutException, git, wc
+from toolz import partition_all
 
 from .common import config, logger
 from .db import engine, repos_table
@@ -47,14 +50,31 @@ def git_pull_local_repos(include_blacklisted: bool):
         logger.info("No local repos to pull updates for.")
         return
     logger.info("Running `git pull` on %i local repos.", len(pull_cmds))
-    for command, _ in run_git_commands(pull_cmds, is_local=False):
-        cwd = command._partial_call_args["cwd"]
-        with engine.begin() as conn:
-            conn.execute(
-                sa.update(repos_table)
-                .where(repos_table.c.local_path == cwd)
-                .values(last_pulled_at=datetime.utcnow().replace(tzinfo=timezone.utc))
-            )
+    for cmd_batch in partition_all(50, reversed(pull_cmds)):
+        for command, result in run_git_commands(cmd_batch, is_local=False):
+            cwd = command._partial_call_args["cwd"]
+            if result is None:
+                # there was an error pulling, so just delete the repo and let it be cloned again.
+                logger.warning("Deleting repo so that it can be cloned again: %s", cwd)
+                if os.path.isdir(cwd):
+                    rmtree(cwd)
+                with engine.begin() as conn:
+                    conn.execute(
+                        sa.update(repos_table)
+                        .where(repos_table.c.local_path == cwd)
+                        .values(last_pulled_at=None, local_path=None)
+                    )
+            else:
+                with engine.begin() as conn:
+                    conn.execute(
+                        sa.update(repos_table)
+                        .where(repos_table.c.local_path == cwd)
+                        .values(
+                            last_pulled_at=datetime.utcnow().replace(
+                                tzinfo=timezone.utc
+                            )
+                        )
+                    )
 
 
 def clone_new_repos(include_blacklisted: bool, retries: int = 2) -> None:
@@ -205,6 +225,13 @@ def run_git_commands(
         except (TimeoutException, ErrorReturnCode) as exp:
             logger.error(
                 "%s error executing git command %s: %s",
+                type(exp),
+                cmd_repr,
+                exp,
+            )
+        except Exception as exp:
+            logger.exception(
+                "Unexpected error (%s) error executing git command %s: %s",
                 type(exp),
                 cmd_repr,
                 exp,
