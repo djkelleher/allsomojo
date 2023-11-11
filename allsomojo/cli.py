@@ -1,7 +1,7 @@
 import click
 from click import Group
 
-cli = Group()
+cli = Group(chain=True)
 
 
 @cli.command
@@ -10,6 +10,7 @@ cli = Group()
 def update_db(search_from_start, include_blacklisted):
     """Update database with new repos / repo changes."""
     click.echo(click.style("Updating database.", fg="cyan"))
+    from .common import env_file_loaded
     from .core import update_db as _update_db
 
     _update_db(
