@@ -65,16 +65,25 @@ repos_table = sa.Table(
     sa.Column("open_issues", sa.Integer),
     sa.Column("license", sa.Text),
     sa.Column("topics", ARRAY(sa.Text, dimensions=1)),
-    sa.Column("code_file_suffixes", ARRAY(sa.Text, dimensions=1)),
     sa.Column(
-        "n_code_files",
+        "n_mojo_files",
         sa.Integer,
-        comment="Number of code files.",
+        comment="Number of Mojo files.",
+    ),
+    sa.Column(
+        "n_python_files",
+        sa.Integer,
+        comment="Number of Python files.",
+    ),
+    sa.Column(
+        "n_notebook_files",
+        sa.Integer,
+        comment="Number Jupyter notebook files.",
     ),
     sa.Column(
         "n_code_lines",
         sa.Integer,
-        comment="Total number of lines of code from all code files.",
+        comment="Total number of lines of code from all code files (Mojo, Python, Jupyter).",
     ),
     sa.Column(
         "lines_added_30d",
@@ -121,6 +130,7 @@ repos_table = sa.Table(
     sa.Column(
         "blacklisted_reason",
         sa.Text,
+        comment="Reason for blacklisting repo: 'needs review', 'not mojo code', 'no code files', 'not found'",
     ),
     sa.Column(
         "manually_checked",

@@ -40,6 +40,7 @@ def review():
     import sqlalchemy as sa
     from tqdm import tqdm
 
+    from .common import env_file_loaded
     from .db import engine, repos_table
 
     with engine.begin() as conn:
@@ -57,6 +58,7 @@ def review():
         )
     )
     for local_path in tqdm(local_paths):
+        click.echo(click.style(local_path, fg="cyan"))
         webbrowser.open(f"file://{local_path}")
         while (answer := input("Is 🔥? (y/n): ").strip().lower()) not in (
             "y",

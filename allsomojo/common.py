@@ -13,9 +13,6 @@ base_dir = Path(__file__).parents[1]
 env_file = base_dir / ".env"
 env_file_loaded: bool = load_dotenv(env_file)
 
-# File suffixes of targeted code types.
-code_file_suffixes = (".mojo", ".🔥", ".py", ".ipynb", ".pxd", ".pyx")
-
 
 class Config(BaseSettings):
     """Settings from environment variables."""

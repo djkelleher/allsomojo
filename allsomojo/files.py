@@ -1,10 +1,10 @@
 import json
 from pathlib import Path
-from typing import Any, Optional, Set
+from typing import Any, List, Optional, Sequence, Set
 
 import sqlalchemy as sa
 
-from .common import code_file_suffixes, logger
+from .common import logger
 from .db import engine, repos_table
 
 
@@ -45,15 +45,15 @@ def local_repo_paths(
     return local_repos
 
 
-def find_code_files(path: Path) -> list[Path]:
+def find_code_files(path: Path, suffixes: Sequence[str]) -> List[Path]:
     """Find all code files in a directory recursively."""
     code_files = []
-    for suffix in code_file_suffixes:
+    for suffix in suffixes:
         for p in path.rglob(f"*{suffix}"):
             if p.is_file():
                 code_files.append(p)
             elif p.is_dir():
-                code_files.extend(find_code_files(p))
+                code_files.extend(find_code_files(p, suffixes))
     return code_files
 
 

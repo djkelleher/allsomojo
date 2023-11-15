@@ -44,9 +44,11 @@ def parse_local_repos(include_blacklisted: bool):
                 print(f"{n_remaining} repos remaining")
             repo_dir = q.get()
             commit_stats = get_repo_changes(repo=repo_dir, since=commit_stats_since)
-            code_files = find_code_files(repo_dir)
+            mojo_files = find_code_files(repo_dir, (".mojo", ".🔥"))
+            python_files = find_code_files(repo_dir, (".py", ".pxd", ".pyx"))
+            notebook_files = find_code_files(repo_dir, (".ipynb",))
             n_code_lines = 0
-            for f in code_files:
+            for f in mojo_files + python_files + notebook_files:
                 if n_lines := count_file_lines(f):
                     n_code_lines += n_lines
             # get the number of code files and total number of lines in all code files.
@@ -56,9 +58,10 @@ def parse_local_repos(include_blacklisted: bool):
                 .where(repos_table.c.local_path == str(repo_dir))
                 .values(
                     commits=n_commits,
-                    n_code_files=len(code_files),
+                    n_mojo_files=len(mojo_files),
+                    n_python_files=len(python_files),
+                    n_notebook_files=len(notebook_files),
                     n_code_lines=n_code_lines,
-                    code_file_suffixes={f.suffix for f in code_files},
                     lines_added_30d=commit_stats.lines_added,
                     lines_deleted_30d=commit_stats.lines_deleted,
                     files_changed_30d=len(commit_stats.files_changed),
@@ -90,10 +93,9 @@ def blacklist_repos():
         res = conn.execute(
             sa.update(repos_table)
             .where(
-                sa.or_(
-                    repos_table.c.code_file_suffixes == [],
-                    repos_table.c.code_file_suffixes.is_(None),
-                ),
+                repos_table.c.n_python_files == 0,
+                repos_table.c.n_mojo_files == 0,
+                repos_table.c.n_notebook_files == 0,
                 repos_table.c.blacklisted_reason.is_(None),
                 repos_table.c.local_path.isnot(None),
                 repos_table.c.manually_checked == False,
@@ -102,17 +104,13 @@ def blacklist_repos():
         )
         logger.info("Blacklisted %i repos containing no code files.", res.rowcount)
 
-    has_mojo_file = sa.or_(
-        sa.text("'.🔥' = ANY(allsomojo.repos.code_file_suffixes)"),
-        sa.text("'.mojo' = ANY(allsomojo.repos.code_file_suffixes)"),
-    )
     # whitelist any repos that now have mojo file extensions and where not manually blacklisted.
     with engine.begin() as conn:
         res = conn.execute(
             sa.update(repos_table)
             .values(blacklisted_reason=None)
             .where(
-                has_mojo_file,
+                repos_table.c.n_mojo_files > 0,
                 repos_table.c.blacklisted_reason.isnot(None),
                 repos_table.c.manually_checked == False,
             )
@@ -128,7 +126,7 @@ def blacklist_repos():
             sa.update(repos_table)
             .values(blacklisted_reason="needs review")
             .where(
-                sa.not_(has_mojo_file),
+                repos_table.c.n_mojo_files == 0,
                 repos_table.c.manually_checked == False,
                 repos_table.c.blacklisted_reason.is_(None),
             )

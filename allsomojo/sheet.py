@@ -30,6 +30,9 @@ columns_header = {
     "lines_changed_30d": "Lines\nChanged\n(30 days)",
     "files_changed_30d": "Files\nChanged\n(30 days)",
     "open_issues": "Open\nIssues",
+    "n_notebook_files": "Notebook\nFiles",
+    "n_mojo_files": "Mojo\nFiles",
+    "n_python_files": "Python\nFiles",
 }
 
 
@@ -104,15 +107,15 @@ def set_sheet_data(data: pd.DataFrame, worksheet: Worksheet):
             )
 
     # strings need to be 'raw' format so they don't get converted to other types (e.g. number or links)
-    str_cols = [
+    raw_cols = [
         c for c in data.select_dtypes(include="object").columns if c != "homepage"
     ]
     # format datetimes so they will be parsable by Google.
     data = data.copy()
     for col in data.select_dtypes(include="datetimetz").columns:
         data[col] = data[col].dt.strftime("%Y-%m-%d")
-    set_columns_data(str_cols, True)
-    set_columns_data([c for c in columns if c not in str_cols], False)
+    set_columns_data(raw_cols, True)
+    set_columns_data([c for c in columns if c not in raw_cols], False)
 
 
 def format_sheet(
@@ -253,7 +256,7 @@ def format_sheet(
         )
 
     ## FORMAT COLUMN VALUES
-    obj_cols = list(data.select_dtypes(include="object").columns)
+    obj_cols = data.select_dtypes(include="object").columns
     for col in columns:
         if col not in ("username", "repo_name", "homepage"):
             set_values_format(col, h_align="LEFT" if col in obj_cols else "CENTER")
@@ -405,14 +408,17 @@ def get_sheet_data() -> pd.DataFrame:
             repos_table.c.stargazers_count,
             # repos_table.c.watchers,
             repos_table.c.open_issues,
-            repos_table.c.n_code_lines,
             repos_table.c.commits,
+            repos_table.c.n_code_lines,
             # repos_table.c.lines_added_30d,
             # repos_table.c.lines_deleted_30d,
             (repos_table.c.lines_added_30d + repos_table.c.lines_deleted_30d).label(
                 "lines_changed_30d"
             ),
             repos_table.c.files_changed_30d,
+            repos_table.c.n_mojo_files,
+            repos_table.c.n_notebook_files,
+            repos_table.c.n_python_files,
             repos_table.c.license,
         )
         .where(repos_table.c.blacklisted_reason.is_(None), repos_table.c.fork == False)
