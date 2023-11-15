@@ -1,6 +1,6 @@
 [project]
 name = "allsomojo"
-version = "0.1.0"
+version = "0.2.0"
 description = "Mojo🔥 code repositoy index."
 authors = [{ name = "Dan Kelleher", email = "kelleherjdan@gmail.com" }]
 license = { text = "MIT" }
@@ -26,9 +26,9 @@ dependencies = [
     "pandas>=2.0.0",
     "google-api-python-client>=2.0.0",
     "toolz",
+    "task-flows",
 ]
 
-#oauth2client = "^4.1.3"
 [project.optional-dependencies]
 dev = ["black"]
 
