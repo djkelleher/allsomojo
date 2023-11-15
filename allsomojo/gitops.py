@@ -77,7 +77,7 @@ def git_pull_local_repos(include_blacklisted: bool):
                     )
 
 
-def clone_new_repos(include_blacklisted: bool, retries: int = 2) -> None:
+def clone_new_repos(include_blacklisted: bool, retries: int = 1) -> None:
     """Clone all repos that we don't currently have locally."""
 
     def _update_local_repo_paths(full_name: str, local_path: Path):
@@ -149,7 +149,17 @@ def clone_new_repos(include_blacklisted: bool, retries: int = 2) -> None:
                     len(failed_cmds),
                     retries,
                 )
-                _try_clone_repos(failed_cmds, retries)
+                return _try_clone_repos(failed_cmds, retries)
+            for cmd in failed_cmds:
+                clone_dir = Path(cmd._partial_baked_args[-1])
+                full_name = f"{clone_dir.parent.name}/{clone_dir.name}"
+                logger.warning("Blacklisting repo not found: %s", full_name)
+                with engine.begin() as conn:
+                    conn.execute(
+                        sa.update(repos_table)
+                        .where(repos_table.c.full_name == full_name)
+                        .values(blacklisted_reason="not found")
+                    )
 
     _try_clone_repos(clone_cmds, retries)
 
