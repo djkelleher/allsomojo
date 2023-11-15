@@ -5,9 +5,9 @@ from pathlib import Path
 import sqlalchemy as sa
 from task_flows import task
 
-from .common import code_file_suffixes, config, logger, task_alerts
+from .common import config, logger, task_alerts
 from .db import check_tables_exist, engine, pg_url_str, repos_table
-from .files import count_file_lines, local_repo_paths
+from .files import count_file_lines, find_code_files, local_repo_paths
 from .ghub import save_github_repos_metadata
 from .gitops import (
     clone_new_repos,
@@ -44,14 +44,12 @@ def parse_local_repos(include_blacklisted: bool):
                 print(f"{n_remaining} repos remaining")
             repo_dir = q.get()
             commit_stats = get_repo_changes(repo=repo_dir, since=commit_stats_since)
-            # get the number of code files and total number of lines in all code files.
-            code_files = []
-            for suffix in code_file_suffixes:
-                code_files.extend(repo_dir.rglob(f"*{suffix}"))
+            code_files = find_code_files(repo_dir)
             n_code_lines = 0
             for f in code_files:
                 if n_lines := count_file_lines(f):
                     n_code_lines += n_lines
+            # get the number of code files and total number of lines in all code files.
             n_commits = total_commits(repo_dir)
             statement = (
                 sa.update(repos_table)
@@ -108,7 +106,7 @@ def blacklist_repos():
         sa.text("'.🔥' = ANY(allsomojo.repos.code_file_suffixes)"),
         sa.text("'.mojo' = ANY(allsomojo.repos.code_file_suffixes)"),
     )
-    # whitelist any repos that now have mojo file extensions.
+    # whitelist any repos that now have mojo file extensions and where not manually blacklisted.
     with engine.begin() as conn:
         res = conn.execute(
             sa.update(repos_table)
@@ -116,6 +114,7 @@ def blacklist_repos():
             .where(
                 has_mojo_file,
                 repos_table.c.blacklisted_reason.isnot(None),
+                repos_table.c.manually_checked == False,
             )
         )
         logger.info(

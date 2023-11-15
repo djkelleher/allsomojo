@@ -4,7 +4,7 @@ from typing import Any, Optional, Set
 
 import sqlalchemy as sa
 
-from .common import logger
+from .common import code_file_suffixes, logger
 from .db import engine, repos_table
 
 
@@ -43,6 +43,18 @@ def local_repo_paths(
     with engine.begin() as conn:
         local_repos = set(conn.execute(query).scalars())
     return local_repos
+
+
+def find_code_files(path: Path) -> list[Path]:
+    """Find all code files in a directory recursively."""
+    code_files = []
+    for suffix in code_file_suffixes:
+        for p in path.rglob(f"*{suffix}"):
+            if p.is_file():
+                code_files.append(p)
+            elif p.is_dir():
+                code_files.extend(find_code_files(p))
+    return code_files
 
 
 def decode_file(file: Path) -> str:

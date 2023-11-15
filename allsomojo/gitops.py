@@ -50,7 +50,7 @@ def git_pull_local_repos(include_blacklisted: bool):
         logger.info("No local repos to pull updates for.")
         return
     logger.info("Running `git pull` on %i local repos.", len(pull_cmds))
-    for cmd_batch in partition_all(50, reversed(pull_cmds)):
+    for cmd_batch in partition_all(50, pull_cmds):
         for command, result in run_git_commands(cmd_batch, is_local=False):
             cwd = command._partial_call_args["cwd"]
             if result is None:
