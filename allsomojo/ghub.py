@@ -48,7 +48,7 @@ def search_for_repos(client: Github, start_from_last_crawl: bool = True) -> int:
     logger.info("Searching for repos. Starting from %s.", search_start)
     counter = count(1)
     for is_fork in (True, None, False):
-        query = "mojo in:name,description,readme,topics"
+        query = "mojo in:name,description,readme,topics,path"
         if is_fork is not None:
             query += " fork:" + str(is_fork).lower()
         for repo in rate_limited_repo_search(client, query, search_start, date.today()):
