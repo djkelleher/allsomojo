@@ -45,12 +45,12 @@ def search_for_repos(client: Github, start_from_last_crawl: bool = True) -> int:
         if isinstance(search_start, datetime):
             search_start = search_start.date()
         search_start -= timedelta(days=1)
+    queries = [f"mojo{flame} in:name,description,readme,topics,path" for flame in ("🔥","")]
+    queries += [f'{q} fork:{str(is_fork).lower()}' for q in queries for is_fork in (True, False)]
     logger.info("Searching for repos. Starting from %s.", search_start)
     counter = count(1)
-    for is_fork in (True, None, False):
-        query = "mojo in:name,description,readme,topics,path"
-        if is_fork is not None:
-            query += " fork:" + str(is_fork).lower()
+    for query in tqdm(queries):
+        logger.info("Starting search: %s.", query)
         for repo in rate_limited_repo_search(client, query, search_start, date.today()):
             logger.info(
                 "[%i] %s created at %s",
