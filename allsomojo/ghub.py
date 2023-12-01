@@ -1,7 +1,8 @@
 from datetime import date, datetime, timedelta, timezone
 from itertools import count
+from pprint import pformat
 from time import sleep, time
-from typing import Any, Dict, Generator, Optional
+from typing import Any, Dict, Generator, Literal, Optional
 
 import sqlalchemy as sa
 from github import (
@@ -44,14 +45,40 @@ def search_for_repos(client: Github, start_from_last_crawl: bool = True) -> int:
     else:
         if isinstance(search_start, datetime):
             search_start = search_start.date()
+        # start a little bit before, just in case...
         search_start -= timedelta(days=1)
-    queries = [f"mojo{flame} in:name,description,readme,topics,path" for flame in ("🔥","")]
-    queries += [f'{q} fork:{str(is_fork).lower()}' for q in queries for is_fork in (True, False)]
-    logger.info("Searching for repos. Starting from %s.", search_start)
+    searches = [
+        {
+            "search_in": "repositories",
+            "query": f"mojo{flame} in:name,description,readme,topics,path",
+            "sort": "updated",
+            "order": "asc",
+        }
+        for flame in ("🔥", "")
+    ]
+    searches += [
+        {**q, "query": f"{q['query']} fork:{str(is_fork).lower()}"}
+        for q in searches
+        for is_fork in (True, False)
+    ]
+    searches += [
+        {"search_in": "code", "query": f".{ext} in:path"} for ext in ("🔥", "mojo")
+    ]
+    logger.info(
+        "Searching for repos. Starting from %s. Running %i queries: %s",
+        search_start,
+        len(searches),
+        pformat(searches),
+    )
     counter = count(1)
-    for query in tqdm(queries):
-        logger.info("Starting search: %s.", query)
-        for repo in rate_limited_repo_search(client, query, search_start, date.today()):
+    for search in tqdm(searches):
+        logger.info("Starting search: %s.", search)
+        for repo in rate_limited_repo_search(
+            client=client,
+            search_start=search_start,
+            search_end=date.today(),
+            **search,
+        ):
             logger.info(
                 "[%i] %s created at %s",
                 next(counter),
@@ -59,7 +86,7 @@ def search_for_repos(client: Github, start_from_last_crawl: bool = True) -> int:
                 repo.created_at,
             )
             repo_metadata = extract_repo_metadata(repo)
-            save_repo_query(repo_metadata["full_name"], query)
+            save_repo_query(repo_metadata["full_name"], search['query'])
             save_repo_metadata(repo_metadata)
     logger.info("Finished searching for new repos.")
 
@@ -112,9 +139,15 @@ def update_saved_repos(
 
 
 def rate_limited_repo_search(
-    client: Github, query: str, search_start: date, search_end: date
+    client: Github,
+    query: str,
+    search_in: Literal["code", "repositories"],
+    search_start: date,
+    search_end: date,
+    **kwargs,
 ) -> Generator[Repository, None, None]:
     """Search for repositories while obeying rate limits."""
+    searcher = getattr(client, f"search_{search_in}")
     # search in 20 day increments, since search is limited to 1000 results.
     dt = timedelta(days=20)
     while search_start < search_end:
@@ -123,9 +156,9 @@ def rate_limited_repo_search(
         q = f"{query} created:{start}..{end}"
         logger.info("Starting search: %s.", q)
         try:
-            for repo in client.search_repositories(
-                query=q, sort="updated", order="asc"
-            ):
+            for repo in searcher(query=q, **kwargs):
+                if search_in == 'code':
+                    repo = repo.repository
                 yield repo
                 req_rem, req_lim = client.rate_limiting
                 if req_rem == 0:
