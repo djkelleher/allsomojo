@@ -157,7 +157,6 @@ repo_queries_table = sa.Table(
 
 def save_repo_metadata(data: Dict[str, Any]):
     """Insert or update a row for the give {username}/{repo} (aka full_name)."""
-
     statement = insert(repos_table).values(data)
     on_conf_set = {c.name: c for c in statement.excluded}
     on_conf_set = {n: c for n, c in on_conf_set.items() if n in data}

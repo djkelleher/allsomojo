@@ -1,8 +1,7 @@
 from datetime import date, datetime, timedelta, timezone
 from itertools import count
-from pprint import pformat
 from time import sleep, time
-from typing import Any, Dict, Generator, Literal, Optional
+from typing import Any, Callable, Dict, Optional
 
 import sqlalchemy as sa
 from github import (
@@ -27,12 +26,13 @@ def save_github_repos_metadata(
     client = Github(auth=Auth.Token(config.gh_token))
     start_time = datetime.utcnow().replace(tzinfo=timezone.utc)
     search_for_repos(client, start_from_last_crawl=start_search_at_last_crawl)
+    search_for_code(client)
     # update all repo entries that did not just get updated from search.
     update_saved_repos(client, include_blacklisted, last_crawled_before=start_time)
 
 
 def search_for_repos(client: Github, start_from_last_crawl: bool = True) -> int:
-    """Save metadata for all repos that have been created since last run."""
+    """Search for repositories and save metadata. (scope search to after last run if start_from_last_crawl is True)."""
     search_start = None
     if start_from_last_crawl:
         with engine.begin() as conn:
@@ -46,49 +46,68 @@ def search_for_repos(client: Github, start_from_last_crawl: bool = True) -> int:
         if isinstance(search_start, datetime):
             search_start = search_start.date()
         # start a little bit before, just in case...
-        search_start -= timedelta(days=1)
-    searches = [
-        {
-            "search_in": "repositories",
-            "query": f"mojo{flame} in:name,description,readme,topics,path",
-            "sort": "updated",
-            "order": "asc",
-        }
-        for flame in ("🔥", "")
+        search_start -= timedelta(days=3)
+    queries = [
+        f"mojo{flame} in:name,description,readme,topics,path" for flame in ("🔥", "")
     ]
-    searches += [
-        {**q, "query": f"{q['query']} fork:{str(is_fork).lower()}"}
-        for q in searches
-        for is_fork in (True, False)
-    ]
-    searches += [
-        {"search_in": "code", "query": f".{ext} in:path"} for ext in ("🔥", "mojo")
+    queries += [
+        f"{q} fork:{str(is_fork).lower()}" for q in queries for is_fork in (True, False)
     ]
     logger.info(
         "Searching for repos. Starting from %s. Running %i queries: %s",
         search_start,
-        len(searches),
-        pformat(searches),
+        len(queries),
+        queries,
     )
     counter = count(1)
-    for search in tqdm(searches):
-        logger.info("Starting search: %s.", search)
-        for repo in rate_limited_repo_search(
-            client=client,
-            search_start=search_start,
-            search_end=date.today(),
-            **search,
-        ):
+    for query in tqdm(queries):
+        logger.info("Starting search: %s.", query)
+        # search in 20 day increments, since search is limited to 1000 results.
+        dt = timedelta(days=20)
+        search_end = date.today()
+        while search_start < search_end:
+            start = search_start.strftime("%Y-%m-%d")
+            end = min(search_end, search_start + dt).strftime("%Y-%m-%d")
+            query_slice = f"{query} created:{start}..{end}"
+            for repo in rate_limited_query(
+                client,
+                query_slice,
+                client.search_repositories,
+                sort="updated",
+                order="asc",
+            ):
+                logger.info(
+                    "[%i] %s created at %s",
+                    next(counter),
+                    repo.full_name,
+                    repo.created_at,
+                )
+                save_repo(repo, query)
+            search_start += dt
+    logger.info("Finished searching for new repos.")
+
+
+def search_for_code(client: Github):
+    """Search for code files with mojo extensions."""
+    queries = [f".{ext} in:path" for ext in ("🔥", "mojo")]
+    logger.info(
+        "Searching for code. Running %i queries: %s",
+        len(queries),
+        queries,
+    )
+    counter = count(1)
+    for query in tqdm(queries):
+        logger.info("Starting search: %s.", query)
+        for result in rate_limited_query(client, query, client.search_code):
+            repo = result.repository
             logger.info(
                 "[%i] %s created at %s",
                 next(counter),
                 repo.full_name,
                 repo.created_at,
             )
-            repo_metadata = extract_repo_metadata(repo)
-            save_repo_query(repo_metadata["full_name"], search['query'])
-            save_repo_metadata(repo_metadata)
-    logger.info("Finished searching for new repos.")
+            save_repo(repo, query)
+    logger.info("Finished searching for new code.")
 
 
 def update_saved_repos(
@@ -138,28 +157,15 @@ def update_saved_repos(
             logger.info("Updated metadata for %s.", repo_name)
 
 
-def rate_limited_repo_search(
-    client: Github,
-    query: str,
-    search_in: Literal["code", "repositories"],
-    search_start: date,
-    search_end: date,
-    **kwargs,
-) -> Generator[Repository, None, None]:
-    """Search for repositories while obeying rate limits."""
-    searcher = getattr(client, f"search_{search_in}")
-    # search in 20 day increments, since search is limited to 1000 results.
-    dt = timedelta(days=20)
-    while search_start < search_end:
-        start = search_start.strftime("%Y-%m-%d")
-        end = min(search_end, search_start + dt).strftime("%Y-%m-%d")
-        q = f"{query} created:{start}..{end}"
-        logger.info("Starting search: %s.", q)
+def rate_limited_query(
+    client: Github, query: str, searcher: Callable, retries: int = 2, **kwargs
+):
+    """Execute a query while obeying rate limits."""
+    for _ in range(retries):
+        logger.info("Starting search: %s.", query)
         try:
-            for repo in searcher(query=q, **kwargs):
-                if search_in == 'code':
-                    repo = repo.repository
-                yield repo
+            for result in searcher(query=query, **kwargs):
+                yield result
                 req_rem, req_lim = client.rate_limiting
                 if req_rem == 0:
                     sleep_t = client.rate_limiting_resettime - time() + 1
@@ -170,7 +176,7 @@ def rate_limited_repo_search(
                             sleep_t,
                         )
                         sleep(sleep_t)
-            search_start += dt
+            return
         except RateLimitExceededException as exp:
             logger.exception(
                 "Rate limit exceeded. Sleeping for 30 minutes. Exception: %s",
@@ -188,6 +194,14 @@ def rate_limited_repo_search(
                 sleep(60 * 30)
             else:
                 raise
+    logger.error("Query did not succeed within %i retries: %s", retries, query)
+
+
+def save_repo(repo: Repository, query: str):
+    """Parse and save repository data."""
+    repo_metadata = extract_repo_metadata(repo)
+    save_repo_query(repo_metadata["full_name"], query)
+    save_repo_metadata(repo_metadata)
 
 
 def extract_repo_metadata(repo: Repository) -> Dict[str, Any]:
