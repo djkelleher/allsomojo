@@ -1,6 +1,8 @@
+from datetime import datetime
 from os import cpu_count
 from pathlib import Path
 from typing import List, Optional
+from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
 from ezloggers import get_logger
@@ -12,6 +14,8 @@ base_dir = Path(__file__).parents[1]
 
 env_file = base_dir / ".env"
 env_file_loaded: bool = load_dotenv(env_file)
+
+mojo_launch_date = datetime(2023, 5, 1, tzinfo=ZoneInfo("UTC"))
 
 
 class Config(BaseSettings):

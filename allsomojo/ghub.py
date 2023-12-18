@@ -14,7 +14,7 @@ from github import (
 from github.Repository import Repository
 from tqdm import tqdm
 
-from .common import config, logger
+from .common import config, logger, mojo_launch_date
 from .db import engine, repos_table, save_repo_metadata, save_repo_query
 
 
@@ -41,7 +41,7 @@ def search_for_repos(client: Github, start_from_last_crawl: bool = True) -> int:
             ).scalar()
     if search_start is None:
         # start at Mojo release date.
-        search_start = date(2023, 5, 1)
+        search_start = mojo_launch_date.date()
     else:
         if isinstance(search_start, datetime):
             search_start = search_start.date()
@@ -100,13 +100,14 @@ def search_for_code(client: Github):
         logger.info("Starting search: %s.", query)
         for result in rate_limited_query(client, query, client.search_code):
             repo = result.repository
-            logger.info(
-                "[%i] %s created at %s",
-                next(counter),
-                repo.full_name,
-                repo.created_at,
-            )
-            save_repo(repo, query)
+            if repo.created_at >= mojo_launch_date:
+                logger.info(
+                    "[%i] %s created at %s",
+                    next(counter),
+                    repo.full_name,
+                    repo.created_at,
+                )
+                save_repo(repo, query)
     logger.info("Finished searching for new code.")
 
 
