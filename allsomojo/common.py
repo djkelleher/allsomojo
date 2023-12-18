@@ -1,3 +1,4 @@
+from datetime import date
 from os import cpu_count
 from pathlib import Path
 from typing import List, Optional
@@ -12,6 +13,8 @@ base_dir = Path(__file__).parents[1]
 
 env_file = base_dir / ".env"
 env_file_loaded: bool = load_dotenv(env_file)
+
+mojo_launch_date = date(2023, 5, 1)
 
 
 class Config(BaseSettings):
