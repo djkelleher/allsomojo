@@ -1,3 +1,4 @@
+import os
 from datetime import date, timedelta
 from multiprocessing import Process, Queue
 from pathlib import Path
@@ -15,7 +16,7 @@ from .gitops import (
     git_pull_local_repos,
     total_commits,
 )
-from .sheet import save_comment_repos
+from .sheet import get_sheet_data, save_comment_repos
 
 
 @task(name="allsomojo-update-db", required=True, alerts=task_alerts)
@@ -132,3 +133,19 @@ def blacklist_repos():
             )
         )
         logger.info("Flagged %i repos for manual review.", res.rowcount)
+
+
+def update_symlinks():
+    """Symlink confirmed Mojo repos to another directory for convenient access."""
+    if not config.selected_repos_dir:
+        return
+    df = get_sheet_data()
+    config.selected_repos_dir.mkdir(parents=True, exist_ok=True)
+    for _, row in df.iterrows():
+        src_path = config.repos_base_dir.joinpath(row["username"], row["repo_name"])
+        dst_path = config.selected_repos_dir.joinpath(
+            f"{row['username']}_{row['repo_name']}"
+        )
+        if not dst_path.exists():
+            logger.info("Creating symlink: %s -> %s", src_path, dst_path)
+            os.symlink(src_path, dst_path)

@@ -1,5 +1,6 @@
 logs
 repos
+selected_repos
 tests/t.ipynb
 tests/dbg.py
 .env

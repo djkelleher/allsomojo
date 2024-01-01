@@ -26,10 +26,12 @@ class Config(BaseSettings):
     # postgres URL
     pg_url: PostgresDsn
     # max number of simultaneous bandwidth-using git commands (e.g. clone, pull).
-    max_git_io: PositiveInt = 4
+    max_git_io: PositiveInt = 8
     max_process: PositiveInt = max(int(cpu_count() * 0.66), 1)
     # where repos should be cloned.
     repos_base_dir: Path = base_dir / "repos"
+    # symlink confirmed Mojo repos to this directory.
+    selected_repos_dir: Optional[Path] = base_dir / "selected_repos"
     # were log files should be stored.
     logs_dir: Path = base_dir / "logs"
     # Google Sheets
