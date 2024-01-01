@@ -34,7 +34,7 @@ def git_pull_local_repos(include_blacklisted: bool):
         git.pull.bake(
             "--quiet",
             _cwd=d,
-            _timeout=400,
+            _timeout=60 * 7,
             _tty_out=False,
             _tty_in=False,
         )
@@ -57,7 +57,7 @@ def git_pull_local_repos(include_blacklisted: bool):
                 # there was an error pulling, so just delete the repo and let it be cloned again.
                 logger.warning("Deleting repo so that it can be cloned again: %s", cwd)
                 if os.path.isdir(cwd):
-                    rmtree(cwd)
+                    rmtree(cwd, ignore_errors=True)
                 with engine.begin() as conn:
                     conn.execute(
                         sa.update(repos_table)
@@ -121,7 +121,7 @@ def clone_new_repos(include_blacklisted: bool, retries: int = 1) -> None:
             git.clone.bake(
                 clone_url,
                 user_dir / Path(clone_url).stem,
-                _timeout=600,
+                _timeout=60 * 20,
                 _out=sys.stdout,
                 _err=sys.stderr,
             )
