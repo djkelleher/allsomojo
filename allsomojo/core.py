@@ -4,7 +4,7 @@ from multiprocessing import Process, Queue
 from pathlib import Path
 
 import sqlalchemy as sa
-from task_flows import task
+from taskflows import task
 
 from .common import config, logger, task_alerts
 from .db import check_tables_exist, engine, pg_url_str, repos_table

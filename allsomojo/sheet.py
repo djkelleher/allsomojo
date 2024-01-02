@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from gspread import Spreadsheet, Worksheet
 from gspread.utils import ValueInputOption
 from sqlalchemy.dialects.postgresql import insert
-from task_flows import task
+from taskflows import task
 
 from .common import config, logger, task_alerts
 from .db import engine, repos_table
