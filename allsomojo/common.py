@@ -38,7 +38,9 @@ class Config(BaseSettings):
     logs_dir: Path = base_dir / "logs"
     # Google Sheets
     spreadsheet_name: str = "Mojo🔥 Repos"
-    worksheet_name: str = "Sheet1"
+    time_sorted_worksheet: str = "Latest Created"
+    star_sorted_worksheet: str = "Most Stars"
+    most_active_worksheet: str = "Biggest Updates(30 days)"
     # comment for manual repo additions.
     comment_anchor: str = '{"type":"workbook-range","uid":0,"range":"421009453"}'
     # Slack alerts.

@@ -68,16 +68,22 @@ dark_orange = RGBColor.from_0_255(red=255, green=109, blue=1)
 @task(name="allsomojo-update-sheet", required=True, alerts=task_alerts)
 def update_sheet():
     """Update Google Sheet with current database data."""
-    df = get_sheet_data()
     client = gspread.service_account()
     spreadsheet = client.open(config.spreadsheet_name)
-    worksheet = spreadsheet.worksheet(config.worksheet_name)
-    set_sheet_data(df, worksheet)
-    format_sheet(
-        data=df,
-        worksheet=worksheet,
-        spreadsheet=spreadsheet,
-    )
+    df = get_sheet_data()
+    for ws_name, sort_by in (
+        (config.time_sorted_worksheet, "created_at"),
+        (config.star_sorted_worksheet, "stargazers_count"),
+        (config.most_active_worksheet, "lines_changed_30d"),
+    ):
+        worksheet = spreadsheet.worksheet(ws_name)
+        df.sort_values(by=sort_by, ascending=False, inplace=True)
+        set_sheet_data(df, worksheet)
+        format_sheet(
+            data=df,
+            worksheet=worksheet,
+            spreadsheet=spreadsheet,
+        )
 
 
 def set_sheet_data(data: pd.DataFrame, worksheet: Worksheet):
