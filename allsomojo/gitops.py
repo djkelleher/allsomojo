@@ -115,12 +115,17 @@ def clone_new_repos(include_blacklisted: bool, retries: int = 1) -> None:
             )
             _update_local_repo_paths(full_name, local_path)
             continue
+        if clone_url is None or username is None:
+            # manually added repo that GitHub API does not know about.
+            assert clone_url is None and username is None
+            continue
+        print(f"Cloning {full_name} {username}: {clone_url}")
         user_dir = config.repos_base_dir / username
         user_dir.mkdir(exist_ok=True, parents=True)
         clone_cmds.append(
             git.clone.bake(
                 clone_url,
-                user_dir / Path(clone_url).stem,
+                user_dir / re.sub(r"\.git$", "", clone_url.split("/")[-1]),
                 _timeout=60 * 20,
                 _out=sys.stdout,
                 _err=sys.stderr,
