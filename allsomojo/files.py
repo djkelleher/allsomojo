@@ -29,13 +29,18 @@ def count_file_lines(file: Path) -> int:
 
 
 def local_repo_paths(
-    include_blacklisted: bool = False, where_conditions: Optional[Any] = None
+    include_blacklisted: bool = False,
+    where_conditions: Optional[Any] = None,
+    include_forks: bool = False,
 ) -> Set[str]:
     """Paths to local repo directories"""
     # use the (single source of truth) database instead of looping through directory.
     query = sa.select(repos_table.c.local_path).where(
-        repos_table.c.local_path.isnot(None)
+        repos_table.c.local_path.isnot(None),
+        repos_table.c.blacklisted_reason.is_(None),
     )
+    if not include_forks:
+        query = query.where(repos_table.c.fork == False)
     if not include_blacklisted:
         query = query.where(repos_table.c.blacklisted_reason.is_(None))
     if where_conditions is not None:

@@ -50,9 +50,7 @@ def search_for_repos(client: Github, start_from_last_crawl: bool = True) -> int:
     queries = [
         f"mojo{flame} in:name,description,readme,topics,path" for flame in ("🔥", "")
     ]
-    queries += [
-        f"{q} fork:{str(is_fork).lower()}" for q in queries for is_fork in (True, False)
-    ]
+    queries += [f"{q} fork:false" for q in queries]
     logger.info(
         "Searching for repos. Starting from %s. Running %i queries: %s",
         search_start,
@@ -114,12 +112,15 @@ def search_for_code(client: Github):
 def update_saved_repos(
     client: Github,
     include_blacklisted: bool,
+    include_forks: bool = False,
     last_crawled_before: Optional[datetime] = None,
 ):
     """Update repo metadata for all repos that are currently in the database."""
     query = sa.select(repos_table.c.full_name)
     if not include_blacklisted:
         query = query.where(repos_table.c.blacklisted_reason.is_(None))
+    if not include_forks:
+        query = query.where(repos_table.c.fork == False)
     if last_crawled_before is not None:
         query = query.where(repos_table.c.last_crawled_at < last_crawled_before)
     with engine.begin() as conn:
