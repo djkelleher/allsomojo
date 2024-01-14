@@ -30,6 +30,7 @@ def update_db(
     save_github_repos_metadata(start_search_at_last_crawl, include_blacklisted)
     git_pull_local_repos(include_blacklisted)
     clone_new_repos(include_blacklisted)
+    update_symlinks()
     parse_local_repos(include_blacklisted)
     blacklist_repos()
 
@@ -146,6 +147,6 @@ def update_symlinks():
         dst_path = config.selected_repos_dir.joinpath(
             f"{row['username']}_{row['repo_name']}"
         )
-        if not dst_path.exists():
+        if not dst_path.is_symlink():
             logger.info("Creating symlink: %s -> %s", src_path, dst_path)
             os.symlink(src_path, dst_path)

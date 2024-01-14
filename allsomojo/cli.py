@@ -12,13 +12,11 @@ def update_db(search_from_start, include_blacklisted):
     click.echo(click.style("Updating database.", fg="cyan"))
     from .common import env_file_loaded
     from .core import update_db as _update_db
-    from .core import update_symlinks
 
     _update_db(
         start_search_at_last_crawl=not search_from_start,
         include_blacklisted=include_blacklisted,
     )
-    update_symlinks()
     click.echo(click.style("Done!", fg="bright_green"))
 
 
