@@ -47,7 +47,9 @@ def parse_local_repos(include_blacklisted: bool):
             repo_dir = q.get()
             commit_stats = get_repo_changes(repo=repo_dir, since=commit_stats_since)
             mojo_files = find_code_files(repo_dir, (".mojo", ".🔥"))
-            python_files = find_code_files(repo_dir, (".py", ".pxd", ".pyx"))
+            python_files = find_code_files(
+                repo_dir, (".py", ".pxd", ".pyx", ".pyi", ".pyd")
+            )
             notebook_files = find_code_files(repo_dir, (".ipynb",))
             n_code_lines = 0
             for f in mojo_files + python_files + notebook_files:
