@@ -12,9 +12,9 @@ from os import cpu_count
 from typing import List, Optional
 from zoneinfo import ZoneInfo
 
-from ezloggers import get_logger
 from pydantic import PositiveInt, PostgresDsn, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from quicklogs import get_logger
 from taskflows import Alerts, Slack
 
 mojo_launch_date = datetime(2023, 5, 1, tzinfo=ZoneInfo("UTC"))
