@@ -216,6 +216,7 @@ def extract_repo_metadata(repo: Repository) -> Dict[str, Any]:
         "username": repo.owner.login,
         "user_type": repo.owner.type,
         "user_avatar_url": repo.owner.avatar_url,
+        "topics": ",".join(repo.topics),
     }
     for field in ("created_at", "updated_at", "pushed_at"):
         val = getattr(repo, field)

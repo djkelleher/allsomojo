@@ -9,11 +9,10 @@ import pandas as pd
 import sqlalchemy as sa
 from gspread import Spreadsheet, Worksheet
 from gspread.utils import ValueInputOption
-from sqlalchemy.dialects.postgresql import insert
 from taskflows import task
 
 from .common import config, logger, task_alerts
-from .db import engine, repos_table
+from .db import engine, repos_table, save_repo_manual_additions
 
 ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
@@ -107,9 +106,9 @@ def set_sheet_data(data: pd.DataFrame, worksheet: Worksheet):
             worksheet.update(
                 f"{ALPHABET[start]}2:{ALPHABET[end]}{len(df_cols)+1}",
                 df_cols.values.tolist(),
-                value_input_option=ValueInputOption.raw
-                if raw
-                else ValueInputOption.user_entered,
+                value_input_option=(
+                    ValueInputOption.raw if raw else ValueInputOption.user_entered
+                ),
             )
 
     # strings need to be 'raw' format so they don't get converted to other types (e.g. number or links)
@@ -118,7 +117,7 @@ def set_sheet_data(data: pd.DataFrame, worksheet: Worksheet):
     ]
     # format datetimes so they will be parsable by Google.
     data = data.copy()
-    for col in data.select_dtypes(include="datetimetz").columns:
+    for col in data.select_dtypes(include="datetime").columns:
         data[col] = data[col].dt.strftime("%Y-%m-%d")
     set_columns_data(raw_cols, True)
     set_columns_data([c for c in columns if c not in raw_cols], False)
@@ -209,7 +208,7 @@ def format_sheet(
         }
     )
     ## FORMAT DATE COLUMNS
-    timestamptz_cols = data.select_dtypes(include="datetimetz").columns.tolist()
+    timestamptz_cols = data.select_dtypes(include="datetime").columns.tolist()
     for start_col, end_col in column_ranges(timestamptz_cols, columns):
         requests.append(
             {

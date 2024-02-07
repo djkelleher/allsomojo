@@ -19,7 +19,6 @@ dependencies = [
     "pydantic-settings>=2.0.0",
     "python-dotenv",
     "tqdm",
-    "psycopg>=3.0.0",
     "click",
     "sh",
     "gspread",

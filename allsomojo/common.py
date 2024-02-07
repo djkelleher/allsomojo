@@ -12,7 +12,7 @@ from os import cpu_count
 from typing import List, Optional
 from zoneinfo import ZoneInfo
 
-from pydantic import PositiveInt, PostgresDsn, SecretStr
+from pydantic import PositiveInt, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from quicklogs import get_logger
 from taskflows import Alerts, Slack
@@ -26,7 +26,7 @@ class Config(BaseSettings):
     # github token
     gh_token: str
     # postgres URL
-    pg_url: PostgresDsn
+    db_url: str
     # max number of simultaneous bandwidth-using git commands (e.g. clone, pull).
     max_git_io: PositiveInt = 8
     max_process: PositiveInt = max(int(cpu_count() * 0.66), 1)

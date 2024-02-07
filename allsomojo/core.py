@@ -7,7 +7,7 @@ import sqlalchemy as sa
 from taskflows import task
 
 from .common import config, logger, task_alerts
-from .db import check_tables_exist, engine, pg_url_str, repos_table
+from .db import check_tables_exist, engine, repos_table
 from .files import count_file_lines, find_code_files, local_repo_paths
 from .ghub import save_github_repos_metadata
 from .gitops import (
@@ -30,16 +30,16 @@ def update_db(
     save_github_repos_metadata(start_search_at_last_crawl, include_blacklisted)
     git_pull_local_repos(include_blacklisted)
     clone_new_repos(include_blacklisted)
-    update_symlinks()
     parse_local_repos(include_blacklisted)
     blacklist_repos()
+    update_symlinks()
 
 
 def parse_local_repos(include_blacklisted: bool):
     """Extract statistics and metadata from local repos."""
 
     def worker(q):
-        eng = sa.create_engine(pg_url_str())
+        eng = sa.create_engine(config.db_url)
         commit_stats_since = date.today() - timedelta(days=30)
         while n_remaining := q.qsize():
             if n_remaining % 100 == 0:

@@ -1,32 +1,20 @@
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any, Dict, Sequence
 
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import ARRAY, insert
+from sqlalchemy.dialects.sqlite import insert
 
 from .common import config, logger
 
-SCHEMA_NAME = "allsomojo"
+engine = sa.create_engine(config.db_url)
 
 
-def pg_url_str() -> str:
-    pg_url = config.pg_url.unicode_string()
-    # prevent SQLAlchemy from defaulting to psycopg2.
-    return pg_url.replace("postgresql://", "postgresql+psycopg://")
-
-
-engine = sa.create_engine(pg_url_str())
-
-
-sa_meta = sa.MetaData(schema=SCHEMA_NAME)
+sa_meta = sa.MetaData()
 
 
 def check_tables_exist():
     """Check if tables exist."""
     with engine.begin() as conn:
-        if not conn.dialect.has_schema(conn, schema=SCHEMA_NAME):
-            logger.info("Creating schema '%s'", SCHEMA_NAME)
-            conn.execute(sa.schema.CreateSchema(SCHEMA_NAME))
         for table in (repo_queries_table, repos_table):
             logger.info("Checking table %s exists.", table.name)
             table.create(conn, checkfirst=True)
@@ -64,7 +52,7 @@ repos_table = sa.Table(
     ),
     sa.Column("open_issues", sa.Integer),
     sa.Column("license", sa.Text),
-    sa.Column("topics", ARRAY(sa.Text, dimensions=1)),
+    sa.Column("topics", sa.Text),
     sa.Column(
         "n_mojo_files",
         sa.Integer,
