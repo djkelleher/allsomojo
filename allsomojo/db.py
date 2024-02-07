@@ -149,15 +149,44 @@ def save_repo_metadata(data: Dict[str, Any]):
     on_conf_set = {c.name: c for c in statement.excluded}
     on_conf_set = {n: c for n, c in on_conf_set.items() if n in data}
     # If no conflict, default values will be used for n_crawls, last_crawled_at
-    on_conf_set["n_crawls"] = sa.text(
-        f'{repos_table.metadata.schema}."{repos_table.name}".n_crawls + 1'
-    )
+    on_conf_set["n_crawls"] = sa.text(f'"{repos_table.name}".n_crawls + 1')
     on_conf_set["last_crawled_at"] = datetime.utcnow().replace(tzinfo=timezone.utc)
     statement = statement.on_conflict_do_update(
         index_elements=repos_table.primary_key.columns, set_=on_conf_set
     )
     with engine.begin() as conn:
         conn.execute(statement)
+
+
+def save_repo_manual_additions(full_names: Sequence[str]):
+    """Save names of manually added repos so they can be scraped/processes."""
+    if isinstance(full_names, str):
+        full_names = [full_names]
+    full_names = [n.strip() for n in full_names]
+    repos = [
+        {
+            "full_name": full_name,
+            "blacklisted_reason": None,
+            "manually_checked": True,
+            "fork": False,
+        }
+        for full_name in full_names
+        if full_name
+    ]
+    logger.info("Adding %i repo manual additions:\n%s", len(repos), repos)
+    if repos:
+        statement = insert(repos_table).values(repos)
+        on_conf_set = {c.name: c for c in statement.excluded}
+        on_conf_set = {
+            n: c
+            for n, c in on_conf_set.items()
+            if n in ("blacklisted_reason", "manually_checked")
+        }
+        statement = statement.on_conflict_do_update(
+            index_elements=repos_table.primary_key.columns, set_=on_conf_set
+        )
+        with engine.begin() as conn:
+            conn.execute(statement)
 
 
 def save_repo_query(full_name: str, query: str):

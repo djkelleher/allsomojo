@@ -373,28 +373,10 @@ def save_comment_repos():
     comment = [c for c in comments if c["anchor"] == config.comment_anchor]
     assert len(comment) == 1
     comment = comment[0]
-    repos = []
+    full_names = []
     for reply in comment["replies"]:
-        repos += re.findall(r"[^\s\/,]+\/[^\s\/,]+", reply["content"])
-    repos = [
-        {"full_name": full_name, "blacklisted_reason": None, "manually_checked": True}
-        for full_name in repos
-        if full_name
-    ]
-    logger.info("Found %i manual repo additions from comments:\n%s", len(repos), repos)
-    if repos:
-        statement = insert(repos_table).values(repos)
-        on_conf_set = {c.name: c for c in statement.excluded}
-        on_conf_set = {
-            n: c
-            for n, c in on_conf_set.items()
-            if n in ("blacklisted_reason", "manually_checked")
-        }
-        statement = statement.on_conflict_do_update(
-            index_elements=repos_table.primary_key.columns, set_=on_conf_set
-        )
-        with engine.begin() as conn:
-            conn.execute(statement)
+        full_names += re.findall(r"[^\s\/,]+\/[^\s\/,]+", reply["content"])
+    save_repo_manual_additions(full_names)
 
 
 def get_sheet_data() -> pd.DataFrame:
@@ -431,9 +413,11 @@ def get_sheet_data() -> pd.DataFrame:
     )
     with engine.begin() as conn:
         df = pd.read_sql_query(query, conn, parse_dates=["created_at", "pushed_at"])
-    df["topics"] = df["topics"].apply(lambda x: ", ".join(x))
+    # df["topics"] = df["topics"].apply(lambda x: ", ".join(x))
     # df["user_avatar_url"] = df["user_avatar_url"].apply(lambda x: f'=IMAGE("{x}")')
     df.replace(np.nan, None, inplace=True)
+    # TODO shouldn't need this
+    df.dropna(how="all", inplace=True)
     return df
 
 
