@@ -24,7 +24,7 @@ def save_github_repos_metadata(
 ):
     """Save metadata for new repos and update existing."""
     client = Github(auth=Auth.Token(config.gh_token))
-    start_time = datetime.utcnow().replace(tzinfo=timezone.utc)
+    start_time = datetime.now(timezone.utc)
     search_for_repos(client, start_from_last_crawl=start_search_at_last_crawl)
     search_for_code(client)
     # update all repo entries that did not just get updated from search.
@@ -51,6 +51,7 @@ def search_for_repos(client: Github, start_from_last_crawl: bool = True) -> int:
         f"mojo{flame} in:name,description,readme,topics,path" for flame in ("🔥", "")
     ]
     queries += [f"{q} fork:false" for q in queries]
+    queries.insert(0, "language:mojo")
     logger.info(
         "Searching for repos. Starting from %s. Running %i queries: %s",
         search_start,

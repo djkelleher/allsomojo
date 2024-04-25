@@ -4,6 +4,7 @@ selected_repos
 tests/t.ipynb
 tests/dbg.py
 .env
+*.sqlite
 *.pickle
 .vscode
 # Byte-compiled / optimized / DLL files
