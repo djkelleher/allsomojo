@@ -79,5 +79,5 @@ if all(
 else:
     task_alerts = None
 
-logger = get_logger("allsomojo", terminal=True, file_dir=config.logs_dir)
+logger = get_logger("allsomojo", file_dir=config.logs_dir)
 logger.info("Loaded .env (%s): %s", env_file, env_file_loaded)
