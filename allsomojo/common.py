@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 from pydantic import PositiveInt, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from quicklogs import get_logger
-from taskflows import Alerts, Slack
+from taskflows import Alerts, SlackChannel
 
 mojo_launch_date = datetime(2023, 5, 1, tzinfo=ZoneInfo("UTC"))
 
@@ -66,7 +66,7 @@ if all(
     task_alerts = [
         Alerts(
             send_to=[
-                Slack(
+                SlackChannel(
                     app_token=config.slack_app_token,
                     bot_token=config.slack_bot_token,
                     channel=config.slack_channel,
