@@ -28,11 +28,11 @@ def update_db(
     check_tables_exist()
     save_comment_repos()
     save_github_repos_metadata(start_search_at_last_crawl, include_blacklisted)
-    git_pull_local_repos(include_blacklisted)
-    clone_new_repos(include_blacklisted)
-    parse_local_repos(include_blacklisted)
-    blacklist_repos()
-    update_symlinks()
+    # git_pull_local_repos(include_blacklisted)
+    # clone_new_repos(include_blacklisted)
+    # parse_local_repos(include_blacklisted)
+    # blacklist_repos()
+    # update_symlinks()
 
 
 def parse_local_repos(include_blacklisted: bool):
